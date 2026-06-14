@@ -1,0 +1,22 @@
+/* Deep Obsidian Global Override */
+html, body, [data-color-mode="dark"] {
+    background-color: #000000 !important;
+    --color-canvas-default: #000000 !important;
+    --color-canvas-overlay: #121317 !important;
+    --color-canvas-subtle: #0d0e12 !important;
+
+    /* Technical borders and custom text visibility accents */
+    --color-border-default: rgba(255, 255, 255, 0.08) !important;
+    --color-fg-default: #e4e4e7 !important;
+    --color-fg-muted: #a1a1aa !important;
+
+    /* Emerald success accent override */
+    --color-accent-fg: #50C878 !important;
+    --color-success-fg: #50C878 !important;
+}
+
+/* Custom crisp scannability inside code repositories */
+.blob-code, .blob-num {
+    font-family: 'JetBrains Mono', monospace !important;
+    background-color: #000000 !important;
+}
