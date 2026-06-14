@@ -1,4 +1,5 @@
-import React, { useState, useRef, useMemo, useCallback } from 'react';
+import React, { useRef, useMemo, useCallback } from 'react';
+import { useFunnel } from '../context/FunnelProvider';
 
 const NODE_WIDTH = 256;
 const NODE_HEIGHT = 114;
@@ -114,24 +115,7 @@ const ArchitectNode = ({ id, type, label, position, metrics, onNodeDrag }) => {
 
 // --- CORE MASTER COMPONENT ---
 export default function FunnelArchitect() {
-  const [nodes, setNodes] = useState([
-    { id: 'node_trf_001', type: 'traffic', label: 'Paid Meta Framework', position: { x: 60, y: 120 }, metrics: { volume: '24k', cpc: '$0.38' } },
-    { id: 'node_lnd_001', type: 'landing_page', label: 'V1 Main Sales Flow', position: { x: 420, y: 220 }, metrics: { views: '18k', cr: '4.2%' } },
-    { id: 'node_chk_001', type: 'checkout', label: 'Premium Suite Core', position: { x: 780, y: 140 }, metrics: { sales: '756', conversion: '12%' } },
-  ]);
-
-  const [edges, setEdges] = useState([
-    { id: 'edge_001', source: 'node_trf_001', target: 'node_lnd_001', isActive: true },
-    { id: 'edge_002', source: 'node_lnd_001', target: 'node_chk_001', isActive: false },
-  ]);
-
-  const handleNodeDrag = useCallback((id, nextX, nextY) => {
-    setNodes((prevNodes) =>
-      prevNodes.map((node) =>
-        node.id === id ? { ...node, position: { x: nextX, y: nextY } } : node
-      )
-    );
-  }, []);
+  const { nodes, edges, updateNodePosition } = useFunnel();
 
   const getEdgeCoordinates = useCallback((edge) => {
     const sourceNode = nodes.find((n) => n.id === edge.source);
@@ -185,7 +169,7 @@ export default function FunnelArchitect() {
           <ArchitectNode
             key={node.id}
             {...node}
-            onNodeDrag={handleNodeDrag}
+            onNodeDrag={updateNodePosition}
           />
         ))}
       </div>
