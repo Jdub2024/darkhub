@@ -1,0 +1,3 @@
+## 2025-05-15 - Optimizing Node-Based Editors
+**Learning:** In canvas-like interactive components (e.g., node-based editors), dragging a single element can trigger cascading re-renders across all sibling elements if they are part of the same parent's state. Using `React.memo` with flattened primitive props for sub-components (edges, nodes) is critical. Additionally, coordinate calculations for edges can become a bottleneck (O(N*E)); using a `Map` to index nodes by ID reduces this to O(N+E).
+**Action:** Always memoize sub-components in canvas editors and use Map-based indexing for cross-element relationship lookups (like edges between nodes).
