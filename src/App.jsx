@@ -1,6 +1,6 @@
 import React from 'react';
-import { FunnelProvider } from '../revenue-engine/context/FunnelProvider';
-import FunnelArchitect from '../revenue-engine/components/FunnelArchitect';
+import { FunnelProvider } from './revenue-engine/context/FunnelProvider';
+import FunnelArchitect from './revenue-engine/components/FunnelArchitect';
 
 const initialNodes = [
   {
