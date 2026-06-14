@@ -17,6 +17,8 @@ An authoritative, high-end financial terminal for managing automated revenue fun
 2. **Funnel Architect**: Visual node-based builder for automated marketing sequences.
    - **Canvas State Engine**: Single source of truth tracking nodes, coordinates, and linkages.
    - **Render View**: Visual grid translating coordinates into Obsidian UI.
+   - **Interactive Layer**: Unified Pointer Events for cross-platform drag support.
+   - **Dynamic Routing**: Real-time Bézier path calculation between node anchors.
 3. **Revenue Streams Management**: Hub for managing affiliate nodes, SaaS subscriptions, and secure payouts.
 
 ## Technical Specifications
@@ -49,6 +51,7 @@ An authoritative, high-end financial terminal for managing automated revenue fun
 ### Performance Optimization
 - **CSS Hardware Acceleration**: Use `translate3d(x, y, 0px)` for node positioning to bypass layout recalculation.
 - **State Decoupling**: Isolate SVG canvas redraws to maintain 60fps during node interaction.
+- **Synthetic Pointer Events**: Unified `onPointer` handlers for native response speeds on mobile and desktop.
 
 ## User Experience
 - High information density with high contrast.
