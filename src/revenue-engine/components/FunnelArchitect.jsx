@@ -1,16 +1,17 @@
-import React, { useRef, useMemo, useCallback } from 'react';
+import React, { useRef, useMemo, useCallback, memo } from 'react';
 import { useFunnel } from '../context/FunnelProvider';
 
 const NODE_WIDTH = 256;
 const NODE_HEIGHT = 114;
 
 // --- SUB-COMPONENT: CONNECTION LINE (SVG EDGE) ---
-const SvgEdge = ({ sourcePos, targetPos, isActive }) => {
-  const deltaX = targetPos.x - sourcePos.x;
-  const controlX1 = sourcePos.x + deltaX / 2;
-  const controlX2 = targetPos.x - deltaX / 2;
+// Memoized to prevent re-renders unless coordinates or active status change
+const SvgEdge = memo(({ sourceX, sourceY, targetX, targetY, isActive }) => {
+  const deltaX = targetX - sourceX;
+  const controlX1 = sourceX + deltaX / 2;
+  const controlX2 = targetX - deltaX / 2;
   
-  const pathData = `M ${sourcePos.x} ${sourcePos.y} C ${controlX1} ${sourcePos.y}, ${controlX2} ${targetPos.y}, ${targetPos.x} ${targetPos.y}`;
+  const pathData = `M ${sourceX} ${sourceY} C ${controlX1} ${sourceY}, ${controlX2} ${targetY}, ${targetX} ${targetY}`;
 
   return (
     <g>
@@ -34,10 +35,11 @@ const SvgEdge = ({ sourcePos, targetPos, isActive }) => {
       />
     </g>
   );
-};
+});
 
 // --- SUB-COMPONENT: INTERACTIVE ARCHITECT NODE ---
-const ArchitectNode = ({ id, type, label, position, metrics, onNodeDrag }) => {
+// Memoized to prevent re-renders unless node data or position changes
+const ArchitectNode = memo(({ id, type, label, position, metrics, onNodeDrag }) => {
   const isConversionNode = type === 'checkout' || type === 'upsell';
   const nodeRef = useRef(null);
   const dragStateRef = useRef({ startX: 0, startY: 0 });
@@ -111,37 +113,34 @@ const ArchitectNode = ({ id, type, label, position, metrics, onNodeDrag }) => {
       <div className="absolute right-0 top-1/2 translate-x-1.5 -translate-y-1/2 w-3 h-3 bg-[#000000] border border-zinc-700 rounded-full hover:border-[#50C878] cursor-crosshair" />
     </div>
   );
-};
+});
 
 // --- CORE MASTER COMPONENT ---
 export default function FunnelArchitect() {
   const { nodes, edges, updateNodePosition } = useFunnel();
 
-  const getEdgeCoordinates = useCallback((edge) => {
-    const sourceNode = nodes.find((n) => n.id === edge.source);
-    const targetNode = nodes.find((n) => n.id === edge.target);
+  // Memoize edge calculations and optimize node lookup from O(N*E) to O(N+E)
+  const renderedEdges = useMemo(() => {
+    // Index nodes by ID for O(1) lookup
+    const nodeIndex = new Map(nodes.map(n => [n.id, n]));
 
-    if (!sourceNode || !targetNode) return null;
+    return edges
+      .map(edge => {
+        const sourceNode = nodeIndex.get(edge.source);
+        const targetNode = nodeIndex.get(edge.target);
 
-    return {
-      sourcePos: {
-        x: sourceNode.position.x + NODE_WIDTH,
-        y: sourceNode.position.y + NODE_HEIGHT / 2,
-      },
-      targetPos: {
-        x: targetNode.position.x,
-        y: targetNode.position.y + NODE_HEIGHT / 2,
-      },
-    };
-  }, [nodes]);
+        if (!sourceNode || !targetNode) return null;
 
-  // Memoize edge calculations to prevent unnecessary re-renders
-  const renderedEdges = useMemo(
-    () => edges
-      .map(edge => ({ ...edge, coords: getEdgeCoordinates(edge) }))
-      .filter(edge => edge.coords !== null),
-    [edges, getEdgeCoordinates]
-  );
+        return {
+          ...edge,
+          sourceX: sourceNode.position.x + NODE_WIDTH,
+          sourceY: sourceNode.position.y + NODE_HEIGHT / 2,
+          targetX: targetNode.position.x,
+          targetY: targetNode.position.y + NODE_HEIGHT / 2,
+        };
+      })
+      .filter(edge => edge !== null);
+  }, [nodes, edges]);
 
   return (
     <div className="relative w-full h-[600px] bg-[#000000] overflow-hidden rounded-xl border border-white/[0.04]">
@@ -156,8 +155,10 @@ export default function FunnelArchitect() {
         {renderedEdges.map((edge) => (
           <SvgEdge
             key={edge.id}
-            sourcePos={edge.coords.sourcePos}
-            targetPos={edge.coords.targetPos}
+            sourceX={edge.sourceX}
+            sourceY={edge.sourceY}
+            targetX={edge.targetX}
+            targetY={edge.targetY}
             isActive={edge.isActive}
           />
         ))}
