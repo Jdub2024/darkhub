@@ -1,12 +1,14 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo, useCallback } from 'react';
 
-// --- SUB-COMPONENT: CONNECTION LINE ---
+const NODE_WIDTH = 256;
+const NODE_HEIGHT = 114;
+
+// --- SUB-COMPONENT: CONNECTION LINE (SVG EDGE) ---
 const SvgEdge = ({ sourcePos, targetPos, isActive }) => {
   const deltaX = targetPos.x - sourcePos.x;
-  // Calculate perfect cubic bezier curve control handles
   const controlX1 = sourcePos.x + deltaX / 2;
   const controlX2 = targetPos.x - deltaX / 2;
-
+  
   const pathData = `M ${sourcePos.x} ${sourcePos.y} C ${controlX1} ${sourcePos.y}, ${controlX2} ${targetPos.y}, ${targetPos.x} ${targetPos.y}`;
 
   return (
@@ -33,14 +35,49 @@ const SvgEdge = ({ sourcePos, targetPos, isActive }) => {
   );
 };
 
-// --- SUB-COMPONENT: ARCHITECT NODE ---
-const ArchitectNode = ({ id, type, label, position, metrics, onDrag }) => {
+// --- SUB-COMPONENT: INTERACTIVE ARCHITECT NODE ---
+const ArchitectNode = ({ id, type, label, position, metrics, onNodeDrag }) => {
   const isConversionNode = type === 'checkout' || type === 'upsell';
+  const nodeRef = useRef(null);
+  const dragStateRef = useRef({ startX: 0, startY: 0 });
+
+  const handlePointerDown = useCallback((e) => {
+    e.stopPropagation();
+    const el = nodeRef.current;
+    if (!el) return;
+
+    el.setPointerCapture(e.pointerId);
+    dragStateRef.current = {
+      startX: e.clientX - position.x,
+      startY: e.clientY - position.y,
+    };
+
+    const handlePointerMove = (moveEvent) => {
+      const nextX = moveEvent.clientX - dragStateRef.current.startX;
+      const nextY = moveEvent.clientY - dragStateRef.current.startY;
+      onNodeDrag(id, nextX, nextY);
+    };
+
+    const handlePointerUp = (upEvent) => {
+      el.releasePointerCapture(upEvent.pointerId);
+      el.removeEventListener('pointermove', handlePointerMove);
+      el.removeEventListener('pointerup', handlePointerUp);
+    };
+
+    el.addEventListener('pointermove', handlePointerMove);
+    el.addEventListener('pointerup', handlePointerUp);
+  }, [id, position.x, position.y, onNodeDrag]);
 
   return (
     <div
-      style={{ transform: `translate3d(${position.x}px, ${position.y}px, 0px)` }}
-      className="absolute w-64 bg-[#121317] border border-white/[0.06] rounded-lg shadow-2xl backdrop-blur-md select-none transition-shadow duration-200 hover:border-white/[0.12]"
+      ref={nodeRef}
+      onPointerDown={handlePointerDown}
+      style={{ 
+        transform: `translate3d(${position.x}px, ${position.y}px, 0px)`,
+        touchAction: 'none',
+        willChange: 'transform',
+      }}
+      className="absolute w-64 bg-[#121317] border border-white/[0.06] rounded-lg shadow-2xl backdrop-blur-md select-none hover:border-white/[0.12] cursor-grab active:cursor-grabbing z-20 pointer-events-auto transition-shadow duration-200"
     >
       {/* Node Header Accent Line */}
       <div className={`h-[2px] w-full rounded-t-lg ${isConversionNode ? 'bg-[#D4AF37]' : 'bg-[#50C878]'}`} />
@@ -75,14 +112,52 @@ const ArchitectNode = ({ id, type, label, position, metrics, onDrag }) => {
   );
 };
 
-// --- CORE FRAMEWORK COMPONENT ---
+// --- CORE MASTER COMPONENT ---
 export default function FunnelArchitect() {
-  // Demo functional snapshot matching state system specs
   const [nodes, setNodes] = useState([
-    { id: '1', type: 'traffic', label: 'Paid Meta Framework', position: { x: 100, y: 150 }, metrics: { volume: '24k', cpc: '$0.38' } },
-    { id: '2', type: 'landing_page', label: 'V1 Main Sales Flow', position: { x: 450, y: 150 }, metrics: { views: '18k', cr: '4.2%' } },
-    { id: '3', type: 'checkout', label: 'Premium Suite Core', position: { x: 800, y: 150 }, metrics: { sales: '756', conversion: '12%' } },
+    { id: 'node_trf_001', type: 'traffic', label: 'Paid Meta Framework', position: { x: 60, y: 120 }, metrics: { volume: '24k', cpc: '$0.38' } },
+    { id: 'node_lnd_001', type: 'landing_page', label: 'V1 Main Sales Flow', position: { x: 420, y: 220 }, metrics: { views: '18k', cr: '4.2%' } },
+    { id: 'node_chk_001', type: 'checkout', label: 'Premium Suite Core', position: { x: 780, y: 140 }, metrics: { sales: '756', conversion: '12%' } },
   ]);
+
+  const [edges, setEdges] = useState([
+    { id: 'edge_001', source: 'node_trf_001', target: 'node_lnd_001', isActive: true },
+    { id: 'edge_002', source: 'node_lnd_001', target: 'node_chk_001', isActive: false },
+  ]);
+
+  const handleNodeDrag = useCallback((id, nextX, nextY) => {
+    setNodes((prevNodes) =>
+      prevNodes.map((node) =>
+        node.id === id ? { ...node, position: { x: nextX, y: nextY } } : node
+      )
+    );
+  }, []);
+
+  const getEdgeCoordinates = useCallback((edge) => {
+    const sourceNode = nodes.find((n) => n.id === edge.source);
+    const targetNode = nodes.find((n) => n.id === edge.target);
+
+    if (!sourceNode || !targetNode) return null;
+
+    return {
+      sourcePos: {
+        x: sourceNode.position.x + NODE_WIDTH,
+        y: sourceNode.position.y + NODE_HEIGHT / 2,
+      },
+      targetPos: {
+        x: targetNode.position.x,
+        y: targetNode.position.y + NODE_HEIGHT / 2,
+      },
+    };
+  }, [nodes]);
+
+  // Memoize edge calculations to prevent unnecessary re-renders
+  const renderedEdges = useMemo(
+    () => edges
+      .map(edge => ({ ...edge, coords: getEdgeCoordinates(edge) }))
+      .filter(edge => edge.coords !== null),
+    [edges, getEdgeCoordinates]
+  );
 
   return (
     <div className="relative w-full h-[600px] bg-[#000000] overflow-hidden rounded-xl border border-white/[0.04]">
@@ -94,17 +169,23 @@ export default function FunnelArchitect() {
 
       {/* SVG Canvas Overlay for Flow Connections */}
       <svg className="absolute inset-0 pointer-events-none w-full h-full z-10">
-        <SvgEdge sourcePos={{ x: 356, y: 220 }} targetPos={{ x: 450, y: 220 }} isActive={true} />
-        <SvgEdge sourcePos={{ x: 706, y: 220 }} targetPos={{ x: 800, y: 220 }} isActive={false} />
+        {renderedEdges.map((edge) => (
+          <SvgEdge
+            key={edge.id}
+            sourcePos={edge.coords.sourcePos}
+            targetPos={edge.coords.targetPos}
+            isActive={edge.isActive}
+          />
+        ))}
       </svg>
 
       {/* Foreground Interactive Node System Layer */}
-      <div className="absolute inset-0 z-20 pointer-events-auto">
+      <div className="absolute inset-0 z-20 pointer-events-none">
         {nodes.map((node) => (
           <ArchitectNode
             key={node.id}
             {...node}
-            onDrag={() => { /* State coordinate patch hooks trigger here */ }}
+            onNodeDrag={handleNodeDrag}
           />
         ))}
       </div>
