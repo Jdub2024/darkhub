@@ -1,0 +1,16 @@
+{
+  "version": 2,
+  "buildCommand": "npm run build",
+  "outputDirectory": "build",
+  "env": {
+    "REACT_APP_METRICS_API": "@react_app_metrics_api",
+    "REACT_APP_METRICS_WS": "@react_app_metrics_ws",
+    "REACT_APP_METRICS_TOKEN": "@react_app_metrics_token",
+    "REACT_APP_CI_WEBHOOK_URL": "@react_app_ci_webhook_url",
+    "REACT_APP_CI_TOKEN": "@react_app_ci_token",
+    "REACT_APP_CI_PROVIDER": "github"
+  },
+  "regions": [
+    "iad1"
+  ]
+}
