@@ -1,0 +1,3 @@
+## 2026-06-19 - Optimization of Node-Based UI Components
+**Learning:** In interactive canvas-like UIs, the combination of O(1) node indexing (via Map) for edge calculations and prop-flattening for memoized sub-components provides the most significant performance boost. Prop-flattening is crucial because React.memo's shallow comparison fails on object props (like `position: {x, y}`) if they are recreated in the parent's render cycle.
+**Action:** Always index nodes by ID for O(1) lookups during edge/connection rendering and prefer primitive props (posX, posY) over objects for memoized canvas elements.
