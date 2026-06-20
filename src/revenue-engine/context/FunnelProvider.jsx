@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 
 export const FunnelContext = createContext();
 
@@ -34,13 +34,13 @@ export const FunnelProvider = ({
     );
   }, []);
 
-  const value = {
+  const value = useMemo(() => ({
     nodes,
     edges,
     setNodes,
     setEdges,
     updateNodePosition,
-  };
+  }), [nodes, edges, updateNodePosition]);
 
   return (
     <FunnelContext.Provider value={value}>
