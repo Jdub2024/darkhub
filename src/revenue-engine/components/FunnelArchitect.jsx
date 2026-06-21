@@ -1,11 +1,11 @@
-import React, { useRef, useMemo, useCallback } from 'react';
+import React, { useRef, useMemo, useCallback, memo } from 'react';
 import { useFunnel } from '../context/FunnelProvider';
 
 const NODE_WIDTH = 256;
 const NODE_HEIGHT = 114;
 
 // --- SUB-COMPONENT: CONNECTION LINE (SVG EDGE) ---
-const SvgEdge = ({ sourcePos, targetPos, isActive }) => {
+const SvgEdge = memo(({ sourcePos, targetPos, isActive }) => {
   const deltaX = targetPos.x - sourcePos.x;
   const controlX1 = sourcePos.x + deltaX / 2;
   const controlX2 = targetPos.x - deltaX / 2;
@@ -34,10 +34,10 @@ const SvgEdge = ({ sourcePos, targetPos, isActive }) => {
       />
     </g>
   );
-};
+});
 
 // --- SUB-COMPONENT: INTERACTIVE ARCHITECT NODE ---
-const ArchitectNode = ({ id, type, label, position, metrics, onNodeDrag }) => {
+const ArchitectNode = memo(({ id, type, label, position, metrics, onNodeDrag }) => {
   const isConversionNode = type === 'checkout' || type === 'upsell';
   const nodeRef = useRef(null);
   const dragStateRef = useRef({ startX: 0, startY: 0 });
@@ -111,37 +111,40 @@ const ArchitectNode = ({ id, type, label, position, metrics, onNodeDrag }) => {
       <div className="absolute right-0 top-1/2 translate-x-1.5 -translate-y-1/2 w-3 h-3 bg-[#000000] border border-zinc-700 rounded-full hover:border-[#50C878] cursor-crosshair" />
     </div>
   );
-};
+});
 
 // --- CORE MASTER COMPONENT ---
 export default function FunnelArchitect() {
   const { nodes, edges, updateNodePosition } = useFunnel();
 
-  const getEdgeCoordinates = useCallback((edge) => {
-    const sourceNode = nodes.find((n) => n.id === edge.source);
-    const targetNode = nodes.find((n) => n.id === edge.target);
-
-    if (!sourceNode || !targetNode) return null;
-
-    return {
-      sourcePos: {
-        x: sourceNode.position.x + NODE_WIDTH,
-        y: sourceNode.position.y + NODE_HEIGHT / 2,
-      },
-      targetPos: {
-        x: targetNode.position.x,
-        y: targetNode.position.y + NODE_HEIGHT / 2,
-      },
-    };
-  }, [nodes]);
-
   // Memoize edge calculations to prevent unnecessary re-renders
-  const renderedEdges = useMemo(
-    () => edges
-      .map(edge => ({ ...edge, coords: getEdgeCoordinates(edge) }))
-      .filter(edge => edge.coords !== null),
-    [edges, getEdgeCoordinates]
-  );
+  // Optimization: Use a Map for O(1) node lookup instead of O(N) find
+  const renderedEdges = useMemo(() => {
+    const nodeMap = new Map(nodes.map((n) => [n.id, n]));
+
+    return edges
+      .map((edge) => {
+        const sourceNode = nodeMap.get(edge.source);
+        const targetNode = nodeMap.get(edge.target);
+
+        if (!sourceNode || !targetNode) return null;
+
+        return {
+          ...edge,
+          coords: {
+            sourcePos: {
+              x: sourceNode.position.x + NODE_WIDTH,
+              y: sourceNode.position.y + NODE_HEIGHT / 2,
+            },
+            targetPos: {
+              x: targetNode.position.x,
+              y: targetNode.position.y + NODE_HEIGHT / 2,
+            },
+          },
+        };
+      })
+      .filter((edge) => edge !== null);
+  }, [nodes, edges]);
 
   return (
     <div className="relative w-full h-[600px] bg-[#000000] overflow-hidden rounded-xl border border-white/[0.04]">

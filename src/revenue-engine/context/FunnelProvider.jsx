@@ -34,13 +34,13 @@ export const FunnelProvider = ({
     );
   }, []);
 
-  const value = {
+  const value = React.useMemo(() => ({
     nodes,
     edges,
     setNodes,
     setEdges,
     updateNodePosition,
-  };
+  }), [nodes, edges, setNodes, setEdges, updateNodePosition]);
 
   return (
     <FunnelContext.Provider value={value}>
