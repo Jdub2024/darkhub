@@ -5,12 +5,15 @@ const NODE_WIDTH = 256;
 const NODE_HEIGHT = 114;
 
 // --- SUB-COMPONENT: CONNECTION LINE (SVG EDGE) ---
-const SvgEdge = memo(({ sourcePos, targetPos, isActive }) => {
-  const deltaX = targetPos.x - sourcePos.x;
-  const controlX1 = sourcePos.x + deltaX / 2;
-  const controlX2 = targetPos.x - deltaX / 2;
+// Optimization: Use primitive props (sx, sy, tx, ty) instead of objects (sourcePos, targetPos)
+// This ensures React.memo can do shallow comparisons effectively, preventing re-renders
+// of unmoved edges even when the parent component re-renders.
+const SvgEdge = memo(({ sx, sy, tx, ty, isActive }) => {
+  const deltaX = tx - sx;
+  const controlX1 = sx + deltaX / 2;
+  const controlX2 = tx - deltaX / 2;
   
-  const pathData = `M ${sourcePos.x} ${sourcePos.y} C ${controlX1} ${sourcePos.y}, ${controlX2} ${targetPos.y}, ${targetPos.x} ${targetPos.y}`;
+  const pathData = `M ${sx} ${sy} C ${controlX1} ${sy}, ${controlX2} ${ty}, ${tx} ${ty}`;
 
   return (
     <g>
@@ -131,16 +134,10 @@ export default function FunnelArchitect() {
 
         return {
           ...edge,
-          coords: {
-            sourcePos: {
-              x: sourceNode.position.x + NODE_WIDTH,
-              y: sourceNode.position.y + NODE_HEIGHT / 2,
-            },
-            targetPos: {
-              x: targetNode.position.x,
-              y: targetNode.position.y + NODE_HEIGHT / 2,
-            },
-          },
+          sx: sourceNode.position.x + NODE_WIDTH,
+          sy: sourceNode.position.y + NODE_HEIGHT / 2,
+          tx: targetNode.position.x,
+          ty: targetNode.position.y + NODE_HEIGHT / 2,
         };
       })
       .filter((edge) => edge !== null);
@@ -159,8 +156,10 @@ export default function FunnelArchitect() {
         {renderedEdges.map((edge) => (
           <SvgEdge
             key={edge.id}
-            sourcePos={edge.coords.sourcePos}
-            targetPos={edge.coords.targetPos}
+            sx={edge.sx}
+            sy={edge.sy}
+            tx={edge.tx}
+            ty={edge.ty}
             isActive={edge.isActive}
           />
         ))}
