@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 
 export const FunnelContext = createContext();
 
@@ -20,11 +20,24 @@ export const FunnelProvider = ({
   const [nodes, setNodes] = useState(initialNodes);
   const [edges, setEdges] = useState(initialEdges);
 
+  // Optimization: Debounce onStateChange to prevent excessive calls during high-frequency updates (e.g. dragging)
+  const callbackRef = useRef(onStateChange);
+
   useEffect(() => {
-    if (autoSync && onStateChange) {
-      onStateChange({ nodes, edges });
-    }
-  }, [nodes, edges, autoSync, onStateChange]);
+    callbackRef.current = onStateChange;
+  }, [onStateChange]);
+
+  useEffect(() => {
+    if (!autoSync || !callbackRef.current) return;
+
+    const handler = setTimeout(() => {
+      if (callbackRef.current) {
+        callbackRef.current({ nodes, edges });
+      }
+    }, 150); // 150ms debounce for performance balance
+
+    return () => clearTimeout(handler);
+  }, [nodes, edges, autoSync]);
 
   const updateNodePosition = useCallback((id, nextX, nextY) => {
     setNodes((prevNodes) =>
