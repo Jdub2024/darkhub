@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 
 export const FunnelContext = createContext();
 
@@ -20,11 +20,25 @@ export const FunnelProvider = ({
   const [nodes, setNodes] = useState(initialNodes);
   const [edges, setEdges] = useState(initialEdges);
 
+  // Performance Optimization: Use a ref for the callback to prevent effect re-runs
+  // when the callback reference changes (avoiding 'callback starvation' or redundant resets)
+  const onStateChangeRef = useRef(onStateChange);
   useEffect(() => {
-    if (autoSync && onStateChange) {
-      onStateChange({ nodes, edges });
-    }
-  }, [nodes, edges, autoSync, onStateChange]);
+    onStateChangeRef.current = onStateChange;
+  }, [onStateChange]);
+
+  // Performance Optimization: Debounce the sync callback by 150ms.
+  // This prevents high-frequency events (like node dragging) from overwhelming
+  // external synchronization logic or persistence layers.
+  useEffect(() => {
+    if (!autoSync || !onStateChangeRef.current) return;
+
+    const handler = setTimeout(() => {
+      onStateChangeRef.current({ nodes, edges });
+    }, 150);
+
+    return () => clearTimeout(handler);
+  }, [nodes, edges, autoSync]);
 
   const updateNodePosition = useCallback((id, nextX, nextY) => {
     setNodes((prevNodes) =>
