@@ -5,12 +5,15 @@ const NODE_WIDTH = 256;
 const NODE_HEIGHT = 114;
 
 // --- SUB-COMPONENT: CONNECTION LINE (SVG EDGE) ---
-const SvgEdge = memo(({ sourcePos, targetPos, isActive }) => {
-  const deltaX = targetPos.x - sourcePos.x;
-  const controlX1 = sourcePos.x + deltaX / 2;
-  const controlX2 = targetPos.x - deltaX / 2;
+// Performance Pattern: Use flattened primitive props instead of objects.
+// This ensures React.memo shallow comparisons work effectively even if
+// the parent recreates coordinate objects.
+const SvgEdge = memo(({ startX, startY, endX, endY, isActive }) => {
+  const deltaX = endX - startX;
+  const controlX1 = startX + deltaX / 2;
+  const controlX2 = endX - deltaX / 2;
   
-  const pathData = `M ${sourcePos.x} ${sourcePos.y} C ${controlX1} ${sourcePos.y}, ${controlX2} ${targetPos.y}, ${targetPos.x} ${targetPos.y}`;
+  const pathData = `M ${startX} ${startY} C ${controlX1} ${startY}, ${controlX2} ${endY}, ${endX} ${endY}`;
 
   return (
     <g>
@@ -159,8 +162,10 @@ export default function FunnelArchitect() {
         {renderedEdges.map((edge) => (
           <SvgEdge
             key={edge.id}
-            sourcePos={edge.coords.sourcePos}
-            targetPos={edge.coords.targetPos}
+            startX={edge.coords.sourcePos.x}
+            startY={edge.coords.sourcePos.y}
+            endX={edge.coords.targetPos.x}
+            endY={edge.coords.targetPos.y}
             isActive={edge.isActive}
           />
         ))}
