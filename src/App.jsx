@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { FunnelProvider } from './revenue-engine/context/FunnelProvider';
 import FunnelArchitect from './revenue-engine/components/FunnelArchitect';
 
@@ -32,10 +32,10 @@ const initialEdges = [
 ];
 
 function App() {
-  const handleStateChange = (state) => {
+  const handleStateChange = useCallback((state) => {
     console.log('Funnel state updated:', state);
     // Optional: Send to analytics, webhook, etc.
-  };
+  }, []);
 
   return (
     <FunnelProvider
