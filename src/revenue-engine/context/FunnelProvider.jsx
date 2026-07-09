@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 
 export const FunnelContext = createContext();
 
@@ -20,18 +20,35 @@ export const FunnelProvider = ({
   const [nodes, setNodes] = useState(initialNodes);
   const [edges, setEdges] = useState(initialEdges);
 
+  // Performance: Debounce external state synchronization (e.g., during high-frequency dragging)
+  const syncCallbackRef = useRef(onStateChange);
   useEffect(() => {
-    if (autoSync && onStateChange) {
-      onStateChange({ nodes, edges });
+    syncCallbackRef.current = onStateChange;
+  }, [onStateChange]);
+
+  useEffect(() => {
+    if (autoSync && syncCallbackRef.current) {
+      const timeoutId = setTimeout(() => {
+        if (syncCallbackRef.current) {
+          syncCallbackRef.current({ nodes, edges });
+        }
+      }, 150);
+      return () => clearTimeout(timeoutId);
     }
-  }, [nodes, edges, autoSync, onStateChange]);
+  }, [nodes, edges, autoSync]);
 
   const updateNodePosition = useCallback((id, nextX, nextY) => {
-    setNodes((prevNodes) =>
-      prevNodes.map((node) =>
-        node.id === id ? { ...node, position: { x: nextX, y: nextY } } : node
-      )
-    );
+    setNodes((prevNodes) => {
+      // Performance: Skip update if coordinates haven't changed
+      const node = prevNodes.find((n) => n.id === id);
+      if (node && node.position.x === nextX && node.position.y === nextY) {
+        return prevNodes;
+      }
+
+      return prevNodes.map((n) =>
+        n.id === id ? { ...n, position: { x: nextX, y: nextY } } : n
+      );
+    });
   }, []);
 
   const value = React.useMemo(() => ({
