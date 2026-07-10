@@ -5,6 +5,8 @@ const NODE_WIDTH = 256;
 const NODE_HEIGHT = 114;
 
 // --- SUB-COMPONENT: CONNECTION LINE (SVG EDGE) ---
+// Performance Optimization: Custom memo comparison to prevent re-renders when
+// coordinate objects have same values but different references.
 const SvgEdge = memo(({ sourcePos, targetPos, isActive }) => {
   const deltaX = targetPos.x - sourcePos.x;
   const controlX1 = sourcePos.x + deltaX / 2;
@@ -33,6 +35,14 @@ const SvgEdge = memo(({ sourcePos, targetPos, isActive }) => {
         className={isActive ? 'animate-[dash_20s_linear_infinite]' : ''}
       />
     </g>
+  );
+}, (prevProps, nextProps) => {
+  return (
+    prevProps.isActive === nextProps.isActive &&
+    prevProps.sourcePos.x === nextProps.sourcePos.x &&
+    prevProps.sourcePos.y === nextProps.sourcePos.y &&
+    prevProps.targetPos.x === nextProps.targetPos.x &&
+    prevProps.targetPos.y === nextProps.targetPos.y
   );
 });
 
