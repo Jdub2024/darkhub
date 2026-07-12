@@ -34,6 +34,17 @@ const SvgEdge = memo(({ sourcePos, targetPos, isActive }) => {
       />
     </g>
   );
+}, (prevProps, nextProps) => {
+  // Optimization: Custom comparison function to ignore new object references for positions
+  // if the underlying coordinate values remain identical. This ensures SvgEdge only re-renders
+  // when necessary, even if the parent recalculates its coordinate objects.
+  return (
+    prevProps.isActive === nextProps.isActive &&
+    prevProps.sourcePos.x === nextProps.sourcePos.x &&
+    prevProps.sourcePos.y === nextProps.sourcePos.y &&
+    prevProps.targetPos.x === nextProps.targetPos.x &&
+    prevProps.targetPos.y === nextProps.targetPos.y
+  );
 });
 
 // --- SUB-COMPONENT: INTERACTIVE ARCHITECT NODE ---
