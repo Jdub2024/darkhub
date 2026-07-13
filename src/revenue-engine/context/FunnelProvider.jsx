@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 
 export const FunnelContext = createContext();
 
@@ -19,19 +19,52 @@ export const FunnelProvider = ({
 }) => {
   const [nodes, setNodes] = useState(initialNodes);
   const [edges, setEdges] = useState(initialEdges);
+  const syncCallbackRef = useRef(onStateChange);
+  const debounceTimerRef = useRef(null);
 
+  // Update ref to latest callback to avoid closure staleness
   useEffect(() => {
-    if (autoSync && onStateChange) {
-      onStateChange({ nodes, edges });
+    syncCallbackRef.current = onStateChange;
+  }, [onStateChange]);
+
+  // Performance: Debounce external state synchronization (150ms)
+  // to reduce overhead during high-frequency events like node dragging.
+  useEffect(() => {
+    if (autoSync && syncCallbackRef.current) {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+
+      debounceTimerRef.current = setTimeout(() => {
+        if (syncCallbackRef.current) {
+          syncCallbackRef.current({ nodes, edges });
+        }
+      }, 150);
     }
-  }, [nodes, edges, autoSync, onStateChange]);
+
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, [nodes, edges, autoSync]);
 
   const updateNodePosition = useCallback((id, nextX, nextY) => {
-    setNodes((prevNodes) =>
-      prevNodes.map((node) =>
-        node.id === id ? { ...node, position: { x: nextX, y: nextY } } : node
-      )
-    );
+    setNodes((prevNodes) => {
+      const nodeIndex = prevNodes.findIndex((n) => n.id === id);
+      if (nodeIndex === -1) return prevNodes;
+
+      const node = prevNodes[nodeIndex];
+      // Performance: Skip state update if coordinates haven't changed.
+      // This prevents unnecessary re-renders of the entire node/edge tree.
+      if (node.position.x === nextX && node.position.y === nextY) {
+        return prevNodes;
+      }
+
+      const nextNodes = [...prevNodes];
+      nextNodes[nodeIndex] = { ...node, position: { x: nextX, y: nextY } };
+      return nextNodes;
+    });
   }, []);
 
   const value = React.useMemo(() => ({
