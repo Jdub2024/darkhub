@@ -20,18 +20,39 @@ export const FunnelProvider = ({
   const [nodes, setNodes] = useState(initialNodes);
   const [edges, setEdges] = useState(initialEdges);
 
+  const syncCallbackRef = React.useRef(onStateChange);
+
   useEffect(() => {
-    if (autoSync && onStateChange) {
-      onStateChange({ nodes, edges });
-    }
-  }, [nodes, edges, autoSync, onStateChange]);
+    syncCallbackRef.current = onStateChange;
+  }, [onStateChange]);
+
+  // Performance Optimization: Debounce the onStateChange synchronization
+  // to avoid blocking the main thread during high-frequency updates (e.g., dragging).
+  useEffect(() => {
+    if (!autoSync || !syncCallbackRef.current) return;
+
+    const handler = setTimeout(() => {
+      if (syncCallbackRef.current) {
+        syncCallbackRef.current({ nodes, edges });
+      }
+    }, 150);
+
+    return () => clearTimeout(handler);
+  }, [nodes, edges, autoSync]);
 
   const updateNodePosition = useCallback((id, nextX, nextY) => {
-    setNodes((prevNodes) =>
-      prevNodes.map((node) =>
+    setNodes((prevNodes) => {
+      const nodeToUpdate = prevNodes.find(n => n.id === id);
+
+      // Optimization: Bail out if position hasn't changed to prevent unnecessary re-renders
+      if (nodeToUpdate && nodeToUpdate.position.x === nextX && nodeToUpdate.position.y === nextY) {
+        return prevNodes;
+      }
+
+      return prevNodes.map((node) =>
         node.id === id ? { ...node, position: { x: nextX, y: nextY } } : node
-      )
-    );
+      );
+    });
   }, []);
 
   const value = React.useMemo(() => ({
