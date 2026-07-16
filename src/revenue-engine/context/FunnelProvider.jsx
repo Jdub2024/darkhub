@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 
 export const FunnelContext = createContext();
 
@@ -19,12 +19,35 @@ export const FunnelProvider = ({
 }) => {
   const [nodes, setNodes] = useState(initialNodes);
   const [edges, setEdges] = useState(initialEdges);
+  const syncTimerRef = useRef(null);
+  const syncCallbackRef = useRef(onStateChange);
 
+  // Keep callback ref updated to avoid stale closures in debounced call
   useEffect(() => {
-    if (autoSync && onStateChange) {
-      onStateChange({ nodes, edges });
+    syncCallbackRef.current = onStateChange;
+  }, [onStateChange]);
+
+  // Performance Optimization: Debounce state synchronization
+  // Reduces overhead when high-frequency updates (like dragging) occur.
+  useEffect(() => {
+    if (!autoSync || !syncCallbackRef.current) return;
+
+    if (syncTimerRef.current) {
+      clearTimeout(syncTimerRef.current);
     }
-  }, [nodes, edges, autoSync, onStateChange]);
+
+    syncTimerRef.current = setTimeout(() => {
+      if (syncCallbackRef.current) {
+        syncCallbackRef.current({ nodes, edges });
+      }
+    }, 150); // 150ms debounce threshold
+
+    return () => {
+      if (syncTimerRef.current) {
+        clearTimeout(syncTimerRef.current);
+      }
+    };
+  }, [nodes, edges, autoSync]);
 
   const updateNodePosition = useCallback((id, nextX, nextY) => {
     setNodes((prevNodes) =>
