@@ -50,11 +50,20 @@ export const FunnelProvider = ({
   }, [nodes, edges, autoSync]);
 
   const updateNodePosition = useCallback((id, nextX, nextY) => {
-    setNodes((prevNodes) =>
-      prevNodes.map((node) =>
-        node.id === id ? { ...node, position: { x: nextX, y: nextY } } : node
-      )
-    );
+    setNodes((prevNodes) => {
+      const nodeIndex = prevNodes.findIndex((n) => n.id === id);
+      if (nodeIndex === -1) return prevNodes;
+
+      const node = prevNodes[nodeIndex];
+      // Optimization: Bail out if position hasn't actually changed
+      if (node.position.x === nextX && node.position.y === nextY) {
+        return prevNodes;
+      }
+
+      const newNodes = [...prevNodes];
+      newNodes[nodeIndex] = { ...node, position: { x: nextX, y: nextY } };
+      return newNodes;
+    });
   }, []);
 
   const value = React.useMemo(() => ({
