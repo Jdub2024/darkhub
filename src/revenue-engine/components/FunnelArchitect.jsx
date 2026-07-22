@@ -5,6 +5,11 @@ const NODE_WIDTH = 256;
 const NODE_HEIGHT = 114;
 
 // --- SUB-COMPONENT: CONNECTION LINE (SVG EDGE) ---
+// Performance Optimization: Use a custom comparison function for React.memo.
+// Instead of comparing prop object references (which change when coordinate objects are recreated),
+// we do a deep equality check on positions and check if isActive changed.
+// This prevents SvgEdge from re-rendering if its positions didn't actually change, which is common
+// when dragging completely unrelated nodes in the Funnel.
 const SvgEdge = memo(({ sourcePos, targetPos, isActive }) => {
   const deltaX = targetPos.x - sourcePos.x;
   const controlX1 = sourcePos.x + deltaX / 2;
@@ -33,6 +38,20 @@ const SvgEdge = memo(({ sourcePos, targetPos, isActive }) => {
         className={isActive ? 'animate-[dash_20s_linear_infinite]' : ''}
       />
     </g>
+  );
+}, (prevProps, nextProps) => {
+  // Safe coordinate validation and deep comparison
+  const prevSource = prevProps.sourcePos || {};
+  const nextSource = nextProps.sourcePos || {};
+  const prevTarget = prevProps.targetPos || {};
+  const nextTarget = nextProps.targetPos || {};
+
+  return (
+    prevProps.isActive === nextProps.isActive &&
+    prevSource.x === nextSource.x &&
+    prevSource.y === nextSource.y &&
+    prevTarget.x === nextTarget.x &&
+    prevTarget.y === nextTarget.y
   );
 });
 
