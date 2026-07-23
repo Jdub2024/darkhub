@@ -5,6 +5,8 @@ const NODE_WIDTH = 256;
 const NODE_HEIGHT = 114;
 
 // --- SUB-COMPONENT: CONNECTION LINE (SVG EDGE) ---
+// Performance Pattern: Use a custom comparison function with React.memo to ignore new object references
+// for sourcePos and targetPos if coordinates are identical. Includes null/undefined checks for runtime safety.
 const SvgEdge = memo(({ sourcePos, targetPos, isActive }) => {
   const deltaX = targetPos.x - sourcePos.x;
   const controlX1 = sourcePos.x + deltaX / 2;
@@ -33,6 +35,25 @@ const SvgEdge = memo(({ sourcePos, targetPos, isActive }) => {
         className={isActive ? 'animate-[dash_20s_linear_infinite]' : ''}
       />
     </g>
+  );
+}, (prevProps, nextProps) => {
+  if (prevProps.isActive !== nextProps.isActive) {
+    return false;
+  }
+  const prevSrc = prevProps.sourcePos;
+  const nextSrc = nextProps.sourcePos;
+  const prevTgt = prevProps.targetPos;
+  const nextTgt = nextProps.targetPos;
+
+  if (!prevSrc || !nextSrc || !prevTgt || !nextTgt) {
+    return prevSrc === nextSrc && prevTgt === nextTgt;
+  }
+
+  return (
+    prevSrc.x === nextSrc.x &&
+    prevSrc.y === nextSrc.y &&
+    prevTgt.x === nextTgt.x &&
+    prevTgt.y === nextTgt.y
   );
 });
 
