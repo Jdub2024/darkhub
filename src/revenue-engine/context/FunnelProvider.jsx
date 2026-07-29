@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 
 export const FunnelContext = createContext();
 
@@ -20,18 +20,37 @@ export const FunnelProvider = ({
   const [nodes, setNodes] = useState(initialNodes);
   const [edges, setEdges] = useState(initialEdges);
 
+  // Performance Pattern: Store the latest callback in a ref.
+  // This allows the debounced effect to invoke the latest callback reference
+  // without triggering timer resets when the callback's parent reference changes.
+  const syncCallbackRef = useRef(onStateChange);
   useEffect(() => {
-    if (autoSync && onStateChange) {
-      onStateChange({ nodes, edges });
+    syncCallbackRef.current = onStateChange;
+  }, [onStateChange]);
+
+  useEffect(() => {
+    if (autoSync) {
+      const handler = setTimeout(() => {
+        if (syncCallbackRef.current) {
+          syncCallbackRef.current({ nodes, edges });
+        }
+      }, 150);
+      return () => clearTimeout(handler);
     }
-  }, [nodes, edges, autoSync, onStateChange]);
+  }, [nodes, edges, autoSync]);
 
   const updateNodePosition = useCallback((id, nextX, nextY) => {
-    setNodes((prevNodes) =>
-      prevNodes.map((node) =>
+    setNodes((prevNodes) => {
+      const targetNode = prevNodes.find((node) => node.id === id);
+      // Performance Pattern: Bail out if node is not found or coordinates are unchanged.
+      // This allows React to completely skip rendering/reconciliation for the node tree.
+      if (!targetNode || (targetNode.position.x === nextX && targetNode.position.y === nextY)) {
+        return prevNodes;
+      }
+      return prevNodes.map((node) =>
         node.id === id ? { ...node, position: { x: nextX, y: nextY } } : node
-      )
-    );
+      );
+    });
   }, []);
 
   const value = React.useMemo(() => ({
