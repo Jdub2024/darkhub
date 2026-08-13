@@ -1,3 +1,7 @@
 ## 2025-05-15 - [Algorithmic and Context Optimizations in Funnel Architect]
 **Learning:** In node-based UIs, calculating edge coordinates by searching through nodes for each edge results in O(N*E) complexity. Converting nodes to a Map once per render reduces this to O(N+E), which scales much better for large graphs. Additionally, failing to memoize context values triggers unnecessary re-renders for all consumers.
 **Action:** Always check for nested O(N) searches in render loops and ensure context values are wrapped in `useMemo`.
+
+## 2025-10-24 - [Debounced Synchronization & React State Bail-out in Context Providers]
+**Learning:** High-frequency visual updates (e.g., node dragging during pointermove events) generate excessive state synchronization requests to the external `onStateChange` callback (e.g., ~60 times per second), drastically reducing performance. Debouncing this callback by 150ms using `useRef` and `setTimeout` solves this problem. Additionally, performing coordinate-equality guards during state updates allows React to trigger a state update bail-out by returning the existing state array reference (`prevNodes`), completely skipping render reconciliations for child components.
+**Action:** Use debouncing for any state synchronizations triggered by interactive gestures or high-frequency callbacks, and always implement state update bail-outs using object reference preservation.
