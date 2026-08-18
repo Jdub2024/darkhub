@@ -5,6 +5,10 @@ const NODE_WIDTH = 256;
 const NODE_HEIGHT = 114;
 
 // --- SUB-COMPONENT: CONNECTION LINE (SVG EDGE) ---
+// Performance Optimization:
+// SvgEdge receives new `sourcePos` and `targetPos` object references on each parent render.
+// A custom comparison function ensures SvgEdge re-renders ONLY when coordinates or active state actually change,
+// preventing costly SVG DOM re-renders during high-frequency drag interactions.
 const SvgEdge = memo(({ sourcePos, targetPos, isActive }) => {
   const deltaX = targetPos.x - sourcePos.x;
   const controlX1 = sourcePos.x + deltaX / 2;
@@ -33,6 +37,17 @@ const SvgEdge = memo(({ sourcePos, targetPos, isActive }) => {
         className={isActive ? 'animate-[dash_20s_linear_infinite]' : ''}
       />
     </g>
+  );
+}, (prevProps, nextProps) => {
+  if (prevProps.isActive !== nextProps.isActive) return false;
+  if (!prevProps.sourcePos || !nextProps.sourcePos || !prevProps.targetPos || !nextProps.targetPos) {
+    return prevProps.sourcePos === nextProps.sourcePos && prevProps.targetPos === nextProps.targetPos;
+  }
+  return (
+    prevProps.sourcePos.x === nextProps.sourcePos.x &&
+    prevProps.sourcePos.y === nextProps.sourcePos.y &&
+    prevProps.targetPos.x === nextProps.targetPos.x &&
+    prevProps.targetPos.y === nextProps.targetPos.y
   );
 });
 
