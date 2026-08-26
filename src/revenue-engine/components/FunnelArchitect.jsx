@@ -5,6 +5,23 @@ const NODE_WIDTH = 256;
 const NODE_HEIGHT = 114;
 
 // --- SUB-COMPONENT: CONNECTION LINE (SVG EDGE) ---
+// Performance Optimization: Custom comparison function for SvgEdge memoization.
+// In FunnelArchitect, renderedEdges useMemo creates new sourcePos and targetPos object references
+// on every nodes update. Default React.memo shallow comparison checks reference equality and triggers
+// unnecessary re-renders for all edges even when their coordinates have not changed.
+// Comparing primitive x/y values prevents unchanged edges from re-rendering during node drag operations.
+const areEdgesEqual = (prevProps, nextProps) => {
+  if (prevProps.isActive !== nextProps.isActive) return false;
+  if (prevProps.sourcePos === nextProps.sourcePos && prevProps.targetPos === nextProps.targetPos) return true;
+  if (!prevProps.sourcePos || !nextProps.sourcePos || !prevProps.targetPos || !nextProps.targetPos) return false;
+  return (
+    prevProps.sourcePos.x === nextProps.sourcePos.x &&
+    prevProps.sourcePos.y === nextProps.sourcePos.y &&
+    prevProps.targetPos.x === nextProps.targetPos.x &&
+    prevProps.targetPos.y === nextProps.targetPos.y
+  );
+};
+
 const SvgEdge = memo(({ sourcePos, targetPos, isActive }) => {
   const deltaX = targetPos.x - sourcePos.x;
   const controlX1 = sourcePos.x + deltaX / 2;
@@ -34,7 +51,7 @@ const SvgEdge = memo(({ sourcePos, targetPos, isActive }) => {
       />
     </g>
   );
-});
+}, areEdgesEqual);
 
 // --- SUB-COMPONENT: INTERACTIVE ARCHITECT NODE ---
 const ArchitectNode = memo(({ id, type, label, position, metrics, onNodeDrag }) => {
