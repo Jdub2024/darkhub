@@ -20,18 +20,40 @@ export const FunnelProvider = ({
   const [nodes, setNodes] = useState(initialNodes);
   const [edges, setEdges] = useState(initialEdges);
 
+  // Performance optimization: Store the onStateChange callback in a ref to prevent
+  // the sync effect from resetting timers unnecessarily when onStateChange reference changes.
+  const syncCallbackRef = React.useRef(onStateChange);
   useEffect(() => {
-    if (autoSync && onStateChange) {
-      onStateChange({ nodes, edges });
-    }
-  }, [nodes, edges, autoSync, onStateChange]);
+    syncCallbackRef.current = onStateChange;
+  }, [onStateChange]);
 
+  // Performance optimization: Debounce autoSync updates (150ms delay) to batch high-frequency
+  // state changes (like continuous drag events) into a single external synchronization call.
+  useEffect(() => {
+    if (!autoSync) return;
+
+    const timer = setTimeout(() => {
+      if (syncCallbackRef.current) {
+        syncCallbackRef.current({ nodes, edges });
+      }
+    }, 150);
+
+    return () => clearTimeout(timer);
+  }, [nodes, edges, autoSync]);
+
+  // Performance optimization: Equality guard on updateNodePosition.
+  // Returns existing prevNodes reference if position is unchanged or node not found,
+  // preventing unnecessary React state updates and component re-renders during dragging.
   const updateNodePosition = useCallback((id, nextX, nextY) => {
-    setNodes((prevNodes) =>
-      prevNodes.map((node) =>
+    setNodes((prevNodes) => {
+      const targetNode = prevNodes.find((node) => node.id === id);
+      if (!targetNode || (targetNode.position.x === nextX && targetNode.position.y === nextY)) {
+        return prevNodes;
+      }
+      return prevNodes.map((node) =>
         node.id === id ? { ...node, position: { x: nextX, y: nextY } } : node
-      )
-    );
+      );
+    });
   }, []);
 
   const value = React.useMemo(() => ({
