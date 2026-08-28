@@ -27,11 +27,17 @@ export const FunnelProvider = ({
   }, [nodes, edges, autoSync, onStateChange]);
 
   const updateNodePosition = useCallback((id, nextX, nextY) => {
-    setNodes((prevNodes) =>
-      prevNodes.map((node) =>
+    setNodes((prevNodes) => {
+      const targetNode = prevNodes.find((node) => node.id === id);
+      // Performance pattern: Equality guard bail-out
+      // If node is not found or coordinates haven't changed, return prevNodes reference to skip React re-renders/reconciliation.
+      if (!targetNode || (targetNode.position.x === nextX && targetNode.position.y === nextY)) {
+        return prevNodes;
+      }
+      return prevNodes.map((node) =>
         node.id === id ? { ...node, position: { x: nextX, y: nextY } } : node
-      )
-    );
+      );
+    });
   }, []);
 
   const value = React.useMemo(() => ({
