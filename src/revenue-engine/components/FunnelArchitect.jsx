@@ -5,36 +5,54 @@ const NODE_WIDTH = 256;
 const NODE_HEIGHT = 114;
 
 // --- SUB-COMPONENT: CONNECTION LINE (SVG EDGE) ---
-const SvgEdge = memo(({ sourcePos, targetPos, isActive }) => {
-  const deltaX = targetPos.x - sourcePos.x;
-  const controlX1 = sourcePos.x + deltaX / 2;
-  const controlX2 = targetPos.x - deltaX / 2;
-  
-  const pathData = `M ${sourcePos.x} ${sourcePos.y} C ${controlX1} ${sourcePos.y}, ${controlX2} ${targetPos.y}, ${targetPos.x} ${targetPos.y}`;
+// Performance Optimization: Custom comparison function for React.memo to prevent unnecessary re-renders.
+// Since new sourcePos/targetPos objects are created on every canvas state update, standard shallow
+// comparison fails. Comparing coordinate scalar values directly allows edges whose positions
+// haven't changed to skip SVG re-render and path recalculations during interactive dragging.
+const SvgEdge = memo(
+  ({ sourcePos, targetPos, isActive }) => {
+    const deltaX = targetPos.x - sourcePos.x;
+    const controlX1 = sourcePos.x + deltaX / 2;
+    const controlX2 = targetPos.x - deltaX / 2;
 
-  return (
-    <g>
-      {/* Glow path layer for active traffic streams */}
-      {isActive && (
+    const pathData = `M ${sourcePos.x} ${sourcePos.y} C ${controlX1} ${sourcePos.y}, ${controlX2} ${targetPos.y}, ${targetPos.x} ${targetPos.y}`;
+
+    return (
+      <g>
+        {/* Glow path layer for active traffic streams */}
+        {isActive && (
+          <path
+            d={pathData}
+            fill="none"
+            stroke="#50C878"
+            strokeWidth="3"
+            className="opacity-20 blur-[2px]"
+          />
+        )}
         <path
           d={pathData}
           fill="none"
-          stroke="#50C878"
-          strokeWidth="3"
-          className="opacity-20 blur-[2px]"
+          stroke={isActive ? '#50C878' : '#27272a'}
+          strokeWidth="1.5"
+          strokeDasharray={isActive ? '6, 4' : 'none'}
+          className={isActive ? 'animate-[dash_20s_linear_infinite]' : ''}
         />
-      )}
-      <path
-        d={pathData}
-        fill="none"
-        stroke={isActive ? '#50C878' : '#27272a'}
-        strokeWidth="1.5"
-        strokeDasharray={isActive ? '6, 4' : 'none'}
-        className={isActive ? 'animate-[dash_20s_linear_infinite]' : ''}
-      />
-    </g>
-  );
-});
+      </g>
+    );
+  },
+  (prevProps, nextProps) => {
+    if (prevProps.isActive !== nextProps.isActive) return false;
+    if (!prevProps.sourcePos || !nextProps.sourcePos || !prevProps.targetPos || !nextProps.targetPos) {
+      return false;
+    }
+    return (
+      prevProps.sourcePos.x === nextProps.sourcePos.x &&
+      prevProps.sourcePos.y === nextProps.sourcePos.y &&
+      prevProps.targetPos.x === nextProps.targetPos.x &&
+      prevProps.targetPos.y === nextProps.targetPos.y
+    );
+  }
+);
 
 // --- SUB-COMPONENT: INTERACTIVE ARCHITECT NODE ---
 const ArchitectNode = memo(({ id, type, label, position, metrics, onNodeDrag }) => {
