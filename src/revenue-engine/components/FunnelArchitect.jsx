@@ -5,12 +5,15 @@ const NODE_WIDTH = 256;
 const NODE_HEIGHT = 114;
 
 // --- SUB-COMPONENT: CONNECTION LINE (SVG EDGE) ---
-const SvgEdge = memo(({ sourcePos, targetPos, isActive }) => {
-  const deltaX = targetPos.x - sourcePos.x;
-  const controlX1 = sourcePos.x + deltaX / 2;
-  const controlX2 = targetPos.x - deltaX / 2;
+// Performance Optimization: Use primitive coordinate props (sourceX, sourceY, targetX, targetY)
+// instead of object props. This allows React.memo's shallow comparison to prevent unnecessary
+// re-renders of unaffected edges when other nodes in the funnel are dragged.
+const SvgEdge = memo(({ sourceX, sourceY, targetX, targetY, isActive }) => {
+  const deltaX = targetX - sourceX;
+  const controlX1 = sourceX + deltaX / 2;
+  const controlX2 = targetX - deltaX / 2;
   
-  const pathData = `M ${sourcePos.x} ${sourcePos.y} C ${controlX1} ${sourcePos.y}, ${controlX2} ${targetPos.y}, ${targetPos.x} ${targetPos.y}`;
+  const pathData = `M ${sourceX} ${sourceY} C ${controlX1} ${sourceY}, ${controlX2} ${targetY}, ${targetX} ${targetY}`;
 
   return (
     <g>
@@ -131,16 +134,10 @@ export default function FunnelArchitect() {
 
         return {
           ...edge,
-          coords: {
-            sourcePos: {
-              x: sourceNode.position.x + NODE_WIDTH,
-              y: sourceNode.position.y + NODE_HEIGHT / 2,
-            },
-            targetPos: {
-              x: targetNode.position.x,
-              y: targetNode.position.y + NODE_HEIGHT / 2,
-            },
-          },
+          sourceX: sourceNode.position.x + NODE_WIDTH,
+          sourceY: sourceNode.position.y + NODE_HEIGHT / 2,
+          targetX: targetNode.position.x,
+          targetY: targetNode.position.y + NODE_HEIGHT / 2,
         };
       })
       .filter((edge) => edge !== null);
@@ -159,8 +156,10 @@ export default function FunnelArchitect() {
         {renderedEdges.map((edge) => (
           <SvgEdge
             key={edge.id}
-            sourcePos={edge.coords.sourcePos}
-            targetPos={edge.coords.targetPos}
+            sourceX={edge.sourceX}
+            sourceY={edge.sourceY}
+            targetX={edge.targetX}
+            targetY={edge.targetY}
             isActive={edge.isActive}
           />
         ))}
