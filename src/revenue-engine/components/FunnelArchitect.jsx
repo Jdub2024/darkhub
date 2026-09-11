@@ -5,12 +5,15 @@ const NODE_WIDTH = 256;
 const NODE_HEIGHT = 114;
 
 // --- SUB-COMPONENT: CONNECTION LINE (SVG EDGE) ---
-const SvgEdge = memo(({ sourcePos, targetPos, isActive }) => {
-  const deltaX = targetPos.x - sourcePos.x;
-  const controlX1 = sourcePos.x + deltaX / 2;
-  const controlX2 = targetPos.x - deltaX / 2;
+// Performance Optimization: Accept primitive coordinate numbers instead of coordinate objects.
+// Default shallow comparison in React.memo will now successfully prevent re-renders when
+// unaffected edges retain identical coordinate primitives during node drags.
+const SvgEdge = memo(({ sourceX, sourceY, targetX, targetY, isActive }) => {
+  const deltaX = targetX - sourceX;
+  const controlX1 = sourceX + deltaX / 2;
+  const controlX2 = targetX - deltaX / 2;
   
-  const pathData = `M ${sourcePos.x} ${sourcePos.y} C ${controlX1} ${sourcePos.y}, ${controlX2} ${targetPos.y}, ${targetPos.x} ${targetPos.y}`;
+  const pathData = `M ${sourceX} ${sourceY} C ${controlX1} ${sourceY}, ${controlX2} ${targetY}, ${targetX} ${targetY}`;
 
   return (
     <g>
@@ -118,7 +121,8 @@ export default function FunnelArchitect() {
   const { nodes, edges, updateNodePosition } = useFunnel();
 
   // Memoize edge calculations to prevent unnecessary re-renders
-  // Optimization: Use a Map for O(1) node lookup instead of O(N) find
+  // Optimization: Use a Map for O(1) node lookup instead of O(N) find.
+  // Extract primitive numbers for coordinates so SvgEdge React.memo shallow equality check succeeds.
   const renderedEdges = useMemo(() => {
     const nodeMap = new Map(nodes.map((n) => [n.id, n]));
 
@@ -131,16 +135,10 @@ export default function FunnelArchitect() {
 
         return {
           ...edge,
-          coords: {
-            sourcePos: {
-              x: sourceNode.position.x + NODE_WIDTH,
-              y: sourceNode.position.y + NODE_HEIGHT / 2,
-            },
-            targetPos: {
-              x: targetNode.position.x,
-              y: targetNode.position.y + NODE_HEIGHT / 2,
-            },
-          },
+          sourceX: sourceNode.position.x + NODE_WIDTH,
+          sourceY: sourceNode.position.y + NODE_HEIGHT / 2,
+          targetX: targetNode.position.x,
+          targetY: targetNode.position.y + NODE_HEIGHT / 2,
         };
       })
       .filter((edge) => edge !== null);
@@ -159,8 +157,10 @@ export default function FunnelArchitect() {
         {renderedEdges.map((edge) => (
           <SvgEdge
             key={edge.id}
-            sourcePos={edge.coords.sourcePos}
-            targetPos={edge.coords.targetPos}
+            sourceX={edge.sourceX}
+            sourceY={edge.sourceY}
+            targetX={edge.targetX}
+            targetY={edge.targetY}
             isActive={edge.isActive}
           />
         ))}
