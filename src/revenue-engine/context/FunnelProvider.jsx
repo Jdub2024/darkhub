@@ -26,12 +26,18 @@ export const FunnelProvider = ({
     }
   }, [nodes, edges, autoSync, onStateChange]);
 
+  // Optimization: Skip state updates if position coordinates haven't changed.
+  // Returning the unchanged `prevNodes` reference allows React to bail out of re-rendering.
   const updateNodePosition = useCallback((id, nextX, nextY) => {
-    setNodes((prevNodes) =>
-      prevNodes.map((node) =>
+    setNodes((prevNodes) => {
+      const existingNode = prevNodes.find((n) => n.id === id);
+      if (existingNode && existingNode.position.x === nextX && existingNode.position.y === nextY) {
+        return prevNodes;
+      }
+      return prevNodes.map((node) =>
         node.id === id ? { ...node, position: { x: nextX, y: nextY } } : node
-      )
-    );
+      );
+    });
   }, []);
 
   const value = React.useMemo(() => ({
