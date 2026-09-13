@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo } from 'react';
 
 export const FunnelContext = createContext();
 
@@ -20,11 +20,26 @@ export const FunnelProvider = ({
   const [nodes, setNodes] = useState(initialNodes);
   const [edges, setEdges] = useState(initialEdges);
 
+  // Performance Optimization: Ref for latest callback to avoid re-triggering effect on function identity changes
+  const syncCallbackRef = useRef(onStateChange);
   useEffect(() => {
-    if (autoSync && onStateChange) {
-      onStateChange({ nodes, edges });
-    }
-  }, [nodes, edges, autoSync, onStateChange]);
+    syncCallbackRef.current = onStateChange;
+  }, [onStateChange]);
+
+  // Performance Optimization: Debounce state synchronization (150ms delay) to prevent bottlenecking main thread
+  // during high-frequency events such as interactive node dragging.
+  useEffect(() => {
+    if (!autoSync || !syncCallbackRef.current) return;
+
+    const timer = setTimeout(() => {
+      // Safe execution check before calling sync callback
+      if (syncCallbackRef.current) {
+        syncCallbackRef.current({ nodes, edges });
+      }
+    }, 150);
+
+    return () => clearTimeout(timer);
+  }, [nodes, edges, autoSync]);
 
   const updateNodePosition = useCallback((id, nextX, nextY) => {
     setNodes((prevNodes) =>
@@ -34,7 +49,7 @@ export const FunnelProvider = ({
     );
   }, []);
 
-  const value = React.useMemo(() => ({
+  const value = useMemo(() => ({
     nodes,
     edges,
     setNodes,
