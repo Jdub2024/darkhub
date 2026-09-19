@@ -26,12 +26,18 @@ export const FunnelProvider = ({
     }
   }, [nodes, edges, autoSync, onStateChange]);
 
+  // Optimization: Equality guard state update bailout.
+  // Returns existing prevNodes reference if position hasn't changed or node doesn't exist, skipping React re-renders.
   const updateNodePosition = useCallback((id, nextX, nextY) => {
-    setNodes((prevNodes) =>
-      prevNodes.map((node) =>
-        node.id === id ? { ...node, position: { x: nextX, y: nextY } } : node
-      )
-    );
+    setNodes((prevNodes) => {
+      const node = prevNodes.find((n) => n.id === id);
+      if (!node || (node.position.x === nextX && node.position.y === nextY)) {
+        return prevNodes;
+      }
+      return prevNodes.map((n) =>
+        n.id === id ? { ...n, position: { x: nextX, y: nextY } } : n
+      );
+    });
   }, []);
 
   const value = React.useMemo(() => ({
