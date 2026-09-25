@@ -5,12 +5,15 @@ const NODE_WIDTH = 256;
 const NODE_HEIGHT = 114;
 
 // --- SUB-COMPONENT: CONNECTION LINE (SVG EDGE) ---
-const SvgEdge = memo(({ sourcePos, targetPos, isActive }) => {
-  const deltaX = targetPos.x - sourcePos.x;
-  const controlX1 = sourcePos.x + deltaX / 2;
-  const controlX2 = targetPos.x - deltaX / 2;
+// Performance Optimization: Accepting primitive coordinate props (sourceX, sourceY, targetX, targetY)
+// enables React.memo's default shallow equality check to prevent unnecessary re-renders of unaffected edges
+// during node drag or state update operations.
+const SvgEdge = memo(({ sourceX, sourceY, targetX, targetY, isActive }) => {
+  const deltaX = targetX - sourceX;
+  const controlX1 = sourceX + deltaX / 2;
+  const controlX2 = targetX - deltaX / 2;
   
-  const pathData = `M ${sourcePos.x} ${sourcePos.y} C ${controlX1} ${sourcePos.y}, ${controlX2} ${targetPos.y}, ${targetPos.x} ${targetPos.y}`;
+  const pathData = `M ${sourceX} ${sourceY} C ${controlX1} ${sourceY}, ${controlX2} ${targetY}, ${targetX} ${targetY}`;
 
   return (
     <g>
@@ -159,8 +162,10 @@ export default function FunnelArchitect() {
         {renderedEdges.map((edge) => (
           <SvgEdge
             key={edge.id}
-            sourcePos={edge.coords.sourcePos}
-            targetPos={edge.coords.targetPos}
+            sourceX={edge.coords.sourcePos.x}
+            sourceY={edge.coords.sourcePos.y}
+            targetX={edge.coords.targetPos.x}
+            targetY={edge.coords.targetPos.y}
             isActive={edge.isActive}
           />
         ))}
