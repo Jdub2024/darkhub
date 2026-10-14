@@ -27,11 +27,16 @@ export const FunnelProvider = ({
   }, [nodes, edges, autoSync, onStateChange]);
 
   const updateNodePosition = useCallback((id, nextX, nextY) => {
-    setNodes((prevNodes) =>
-      prevNodes.map((node) =>
+    setNodes((prevNodes) => {
+      // Performance Optimization: Skip state updates if the node does not exist or coordinates are unchanged, preventing unnecessary re-renders.
+      const targetNode = prevNodes.find((node) => node.id === id);
+      if (!targetNode || (targetNode.position.x === nextX && targetNode.position.y === nextY)) {
+        return prevNodes;
+      }
+      return prevNodes.map((node) =>
         node.id === id ? { ...node, position: { x: nextX, y: nextY } } : node
-      )
-    );
+      );
+    });
   }, []);
 
   const value = React.useMemo(() => ({
