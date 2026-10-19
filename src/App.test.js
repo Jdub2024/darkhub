@@ -7,3 +7,13 @@ test('renders funnel architect', () => {
   const linkElement = screen.getByText(/Paid Meta Framework/i);
   expect(linkElement).toBeInTheDocument();
 });
+
+test('renders SVG edges with expected coordinates path', () => {
+  const { container } = render(<App />);
+  const svgPaths = container.querySelectorAll('svg path');
+  expect(svgPaths.length).toBeGreaterThan(0);
+
+  // Verify that path data (d attribute) contains expected curved bezier path coordinates
+  const pathD = svgPaths[0].getAttribute('d');
+  expect(pathD).toMatch(/^M \d+ \d+ C/);
+});
