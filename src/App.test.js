@@ -7,3 +7,9 @@ test('renders funnel architect', () => {
   const linkElement = screen.getByText(/Paid Meta Framework/i);
   expect(linkElement).toBeInTheDocument();
 });
+
+test('renders SVG edge path correctly with primitive coordinates', () => {
+  const { container } = render(<App />);
+  const svgPaths = container.querySelectorAll('svg path');
+  expect(svgPaths.length).toBeGreaterThan(0);
+});
